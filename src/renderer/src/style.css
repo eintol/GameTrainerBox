@@ -1,0 +1,39 @@
+/* Tailwind v4: 按层引入, 不引 preflight —— 避免 Tailwind 重置样式与 Element Plus 冲突 */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+@layer base {
+  /* preflight 被跳过后需手动补全局 border-box, 否则 w-full/h-full + padding 会溢出父容器 */
+  *,
+  ::before,
+  ::after {
+    box-sizing: border-box;
+  }
+}
+
+/* Element Plus 主色覆盖为粉色系(配合浅粉主题; 梯度取自 Tailwind pink) */
+:root {
+  --el-color-primary: #ec4899;
+  --el-color-primary-light-3: #f472b6;
+  --el-color-primary-light-5: #f9a8d4;
+  --el-color-primary-light-7: #fbcfe8;
+  --el-color-primary-light-8: #fce7f3;
+  --el-color-primary-light-9: #fdf2f8;
+  --el-color-primary-dark-2: #db2777;
+}
+
+/* Element Plus 表格圆角(裁掉内部直角背景) */
+.el-table {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  font-family:
+    'Segoe UI',
+    'Microsoft YaHei',
+    system-ui,
+    sans-serif;
+}

@@ -1,0 +1,11 @@
+node_modules/
+out/
+dist/
+*.local
+*.log
+.DS_Store
+.idea/
+.vscode/
+*.tsbuildinfo
+scripts/.*
+docs/claude/

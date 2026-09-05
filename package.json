@@ -1,0 +1,42 @@
+{
+  "name": "gametrainerbox",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GameTrainerBox - 游戏修改器盒子",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
+    "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json --composite false",
+    "typecheck": "pnpm typecheck:node && pnpm typecheck:web",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "build:win": "pnpm typecheck && electron-vite build && electron-builder --win"
+  },
+  "dependencies": {
+    "@lucide/vue": "^1.40.0",
+    "element-plus": "^2.14.5",
+    "koffi": "^3.2.0",
+    "vue": "^3.5.42"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.4.1",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "electron": "^44.1.1",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "eslint": "^10.9.1",
+    "eslint-plugin-vue": "^10.10.0",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.6",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.69.0",
+    "vite": "^8.2.2",
+    "vue-tsc": "^3.3.11"
+  }
+}
