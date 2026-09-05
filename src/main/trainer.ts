@@ -15,8 +15,10 @@ export interface AttrRow {
   name: string
   /** 当前显示值(base / valueScale) */
   curDisplay: number
-  /** 上限显示值(上限 base + 强化) */
+  /** 上限显示值(主属性 = 上限键 base+强化; 附加键 = 自身硬封顶字段 Max) */
   maxDisplay: number | null
+  /** 是否有独立上限键(附加键如移速没有) */
+  hasCap: boolean
 }
 
 const LOCK_INTERVAL_MS = 300
@@ -130,7 +132,7 @@ export class TrainerService {
     return { info }
   }
 
-  /** 读取主属性行(供 UI 展示) */
+  /** 读取主属性行(供 UI 展示); extraKeys(如移速)的上限列显示自身硬封顶字段 Max */
   getAttrs(): AttrRow[] {
     if (!this.attached) return []
     const rows: AttrRow[] = []
@@ -145,13 +147,27 @@ export class TrainerService {
         key: def.key,
         name: def.name,
         curDisplay: d.base / this.profile.valueScale,
-        maxDisplay: cap ? cap.base + cap.strengthening : null
+        maxDisplay: cap ? cap.base + cap.strengthening : null,
+        hasCap: true
+      })
+    }
+    for (const def of this.profile.extraKeys ?? []) {
+      const h = this.handles.get(def.key)
+      if (!h) continue
+      const d = h.read()
+      if (!d) continue
+      rows.push({
+        key: def.key,
+        name: def.name,
+        curDisplay: d.base / this.profile.valueScale,
+        maxDisplay: d.max / this.profile.valueScale,
+        hasCap: false
       })
     }
     return rows
   }
 
-  /** 按显示值写入当前值 */
+  /** 按显示值写入当前值; 目标超过属性自身硬封顶(Max)时一并抬高(否则游戏消费侧会被封顶) */
   setAttr(key: number, displayValue: number): boolean {
     const h = this.handles.get(key)
     if (!h) {
@@ -159,6 +175,11 @@ export class TrainerService {
       return false
     }
     const base = Math.round(displayValue * this.profile.valueScale)
+    const d = h.read()
+    if (d && base > d.max && !h.setMaxField(base)) {
+      this.log('[!] 硬封顶字段写入失败')
+      return false
+    }
     if (!h.setBase(base)) {
       this.log('[!] 内存写入失败')
       return false
@@ -316,6 +337,7 @@ export class TrainerService {
   }
 
   private keyName(key: number): string {
-    return this.profile.mainKeys.find((k) => k.key === key)?.name ?? `键${key}`
+    const all = [...this.profile.mainKeys, ...(this.profile.extraKeys ?? [])]
+    return all.find((k) => k.key === key)?.name ?? `键${key}`
   }
 }

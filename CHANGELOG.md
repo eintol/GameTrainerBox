@@ -2,6 +2,17 @@
 
 格式参照 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### 新增
+
+- 人物移速调整：属性表新增「移速」行（AttrName.MoveSpeed=401，同字典附加键机制 `extraKeys`），
+  支持查看 / 修改 / 锁定 / 一键拉满；写入值超游戏硬封顶（显示 10.0）时自动抬高封顶字段；
+  新增诊断脚本 `diag-movespeed`（复验移速数值口径与写入链路）
+- 本机配置文件 `local.env` 机制（gitignore，模板 `local.env.example`）：游戏安装根目录等机器相关
+  配置改为 环境变量 > `local.env`（便携版 exe 同目录或项目根）> 占位符 的解析链，
+  解决 setx 环境变量对已打开终端不生效导致容器扩容面板误报"未检测到"的问题
+
 ## [0.1.0] - 2026-09-05
 
 首个公开版本。

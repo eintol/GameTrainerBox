@@ -9,3 +9,4 @@ dist/
 *.tsbuildinfo
 scripts/.*
 docs/claude/
+local.env

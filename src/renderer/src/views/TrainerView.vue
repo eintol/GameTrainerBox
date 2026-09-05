@@ -263,6 +263,15 @@ async function onMax500(key: number): Promise<void> {
   await refresh()
 }
 
+/** 附加键(无上限键, 如移速)一键拉满到自身硬封顶字段 Max */
+async function onMaxSelf(key: number): Promise<void> {
+  const row = rows.value.find((r) => r.key === key)
+  if (!row || row.maxDisplay === null) return
+  const ok = await window.api.setAttr(key, row.maxDisplay)
+  if (ok) playSuccess()
+  await refresh()
+}
+
 async function onLockChange(key: number, enabled: boolean): Promise<void> {
   const row = rows.value.find((r) => r.key === key)
   if (!row) return
@@ -383,6 +392,7 @@ function fmt(v: number | null): string {
         <el-table-column label="操作">
           <template #default="{ row }">
             <el-button
+              v-if="row.hasCap"
               size="small"
               type="warning"
               plain
@@ -392,6 +402,17 @@ function fmt(v: number | null): string {
               <Zap class="mr-1 h-3.5 w-3.5" />
               上限→500
             </el-button>
+            <el-button
+              v-else
+              size="small"
+              type="warning"
+              plain
+              :disabled="!scanned || row.maxDisplay === null"
+              @click="onMaxSelf(row.key)"
+            >
+              <Zap class="mr-1 h-3.5 w-3.5" />
+              拉满
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -400,7 +421,8 @@ function fmt(v: number | null): string {
         class="mt-3 flex items-center gap-3"
       >
         <span class="text-xs text-gray-500">
-          填写"改为"后点该行"应用"即写入; 勾选锁定后每 0.3 秒自动写回; "健康*"为内部隐藏值, 一般不用改
+          填写"改为"后点该行"应用"即写入; 勾选锁定后每 0.3 秒自动写回; "健康*"为内部隐藏值, 一般不用改;
+          移速正常值为 3.0, 超过上限 10 时会自动抬高游戏硬封顶
         </span>
       </div>
     </section>

@@ -43,6 +43,8 @@ export interface AttrRow {
   name: string
   curDisplay: number
   maxDisplay: number | null
+  /** 是否有独立上限键(附加键如移速没有, 上限列显示的是自身硬封顶字段) */
+  hasCap: boolean
 }
 
 export interface ScanResultDto {

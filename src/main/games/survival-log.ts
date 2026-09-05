@@ -3,6 +3,7 @@
 // 规格来源: Il2CppDumper dump.cs + Python 原型实测验证
 //   (归档文档: docs/2026-09-04-生存日志运行时修改器-方案与使用.md)
 import type { GameProfile } from './types'
+import { localEnv } from '../local-env'
 
 // AttrName 枚举全部合法值(99 个, 提取自 dump.cs, 用于 Dictionary entry 校验)
 const ATTR_NAME_VALUES = [
@@ -15,10 +16,11 @@ const ATTR_NAME_VALUES = [
   81004, 81005, 81006, 81007, 81008, 81009, 81010, 81011, 81012
 ]
 
-// 游戏安装根目录(Steam 库路径每台机器不同): 优先读环境变量 GTB_SURVIVAL_LOG_ROOT
-// (指向游戏安装目录, 如 C:\Program Files (x86)\Steam\steamapps\common\Survival Log);
-// 未设置时用占位符, Mod 配置文件不可用时 trainer 侧自动把容器扩容功能降级为不可用
-const GAME_ROOT = process.env.GTB_SURVIVAL_LOG_ROOT || '<游戏安装目录>'
+// 游戏安装根目录(Steam 库路径每台机器不同), 按优先级解析:
+//   1. 环境变量 GTB_SURVIVAL_LOG_ROOT
+//   2. local.env(gitignore, 不入库): 便携版 exe 同目录 或 项目根
+// 两处都没有时用占位符, Mod 配置文件不可用时 trainer 侧自动把容器扩容功能降级为不可用
+const GAME_ROOT = process.env.GTB_SURVIVAL_LOG_ROOT || localEnv('GTB_SURVIVAL_LOG_ROOT') || '<游戏安装目录>'
 
 export const survivalLogProfile: GameProfile = {
   id: 'survival-log',
@@ -48,6 +50,9 @@ export const survivalLogProfile: GameProfile = {
   ],
   capKeyOffset: 100,
   maxCapValue: 500,
+  // 移速(AttrName.MoveSpeed=401, 无上限键 501): 1.0.15704 实测 正常 base=3000(显示 3.0),
+  // 硬封顶 Attr.Max=10000(显示 10.0), Min=-500; 显示值 = base/1000, 写入超 Max 时 trainer 自动抬 Max
+  extraKeys: [{ key: 401, name: '移速' }],
   attrNameValues: ATTR_NAME_VALUES,
   // 容器扩容 Mod(BepInEx 插件, 源码与构建部署见 docs/辅助工具使用说明.md)的配置文件
   modConfigPath:

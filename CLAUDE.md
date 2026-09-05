@@ -96,8 +96,11 @@ GameTrainerBox：单机游戏运行时属性修改器（Electron 桌面应用）
     `scripts/locate-attr-class.ts` 输出为准，此文件仅作参考）
 - **存档目录**: `%USERPROFILE%\AppData\LocalLow\LLS\SLGame\Saves\`（MemoryPack 二进制未加密，带 .bak）
 - **运行日志**: `%USERPROFILE%\AppData\LocalLow\LLS\SLGame\Player.log`（游戏内部日志，含存档快照记录）
-- **Mod 配置路径**: profile 的 `modConfigPath` 等由环境变量 `GTB_SURVIVAL_LOG_ROOT`（= `<游戏安装目录>`）拼接，
-  未设置时容器扩容功能自动降级为不可用（见 `src/main/games/survival-log.ts`）
+- **Mod 配置路径**: profile 的 `modConfigPath` 等由游戏安装根目录拼接，解析优先级 环境变量
+  `GTB_SURVIVAL_LOG_ROOT` > `local.env`（gitignore，模板见 `local.env.example`，机制见
+  `src/main/local-env.ts`）> 占位符 `<游戏安装目录>`；都不可用时容器扩容功能自动降级为不可用
+  （见 `src/main/games/survival-log.ts`）。**新增机器相关配置一律走 local.env**——setx 对已打开的
+  终端不生效，纯环境变量配置在 dev 下必然踩坑（见踩坑记录 D5）
 
 重新 dump（游戏大版本更新后）:
 
@@ -119,6 +122,10 @@ cd <工具目录>\Il2CppDumper
   `[hash][next][key][pad][ptr]`、int 枚举键 hash==key、pad 恒 0、Attr 字段偏移
   BaseValue 0x10 / Strengthening 0x14 / Max 0x1C、显示值 = BaseValue/1000、上限 = base+强化
 - 游戏 UI「生命」= 键 5 (Vitality)；键 4 (Health) 是隐藏属性；101-105 为对应上限键
+- 移速 = 键 401 (AttrName.MoveSpeed)，无上限键 501 —— profile 走 `extraKeys`
+  （不得塞进 mainKeys，否则 isPlayerDict 会要求不存在的键 501 导致鉴别全挂）；
+  1.0.15704 实测正常 base=3000（显示 3.0）、硬封顶 Attr.Max=10000（显示 10.0）、Min=-500；
+  写入值超 Max 时 trainer 自动抬高 Max 字段；复验脚本 `scripts/diag-movespeed.ts`
 - 主界面时 Attr 类未初始化（TypeInfo 处是非对齐魔数），必须进存档局内才能扫描
 
 ## 容器扩容 Mod（BepInEx 插件）

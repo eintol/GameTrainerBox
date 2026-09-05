@@ -39,6 +39,12 @@ export interface GameProfile {
   mainKeys: AttrKeyDef[]
   /** 上限键 = 主键 + capKeyOffset */
   capKeyOffset: number
+  /**
+   * 附加键(可选): 同一属性字典内的额外可调属性(如移速 401), 与 mainKeys 一样走
+   * valueScale 换算; 区别是没有独立上限键(键+offset 不存在), 硬封顶就是 Attr.Max 字段,
+   * 不参与 isPlayerDict 鉴别(加了会导致主角字典判定失败)
+   */
+  extraKeys?: AttrKeyDef[]
   /** 「上限拉满」按钮的目标值(游戏硬封顶) */
   maxCapValue: number
   /** AttrName 枚举全部合法值(用于 entry 校验, 来自 dump.cs) */
