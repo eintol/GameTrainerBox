@@ -4,8 +4,11 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { GameProcess } from './engine/process'
 import { AttrHandle, scanPlayerAttrs } from './engine/scanner'
+import { SingletonFieldHandle, scanSingletonFields } from './engine/singleton'
 import type { GameProfile } from './games/types'
 import { survivalLogProfile } from './games/survival-log'
+import { scadProfile } from './games/scad'
+import { isAttrDictProfile } from './games/types'
 import type { ContainerInfo, ContainerOverride, GameMeta, ModConfigPatch, ModConfigState } from '../shared'
 
 export type LogFn = (msg: string) => void
@@ -74,7 +77,10 @@ function serializeOverrides(list: ContainerOverride[]): string {
 
 export class TrainerService {
   private proc: GameProcess | null = null
+  /** 属性字典式句柄(Survival Log) */
   private handles: Map<number, AttrHandle> = new Map()
+  /** 静态单例字段句柄(SCAD) */
+  private fieldHandles: Map<number, SingletonFieldHandle> = new Map()
   /** 已注册的游戏 profile(加游戏 = register 一个 profile) */
   private profiles = new Map<string, GameProfile>()
   /** 当前选中的游戏 id(scan 时设置) */
@@ -87,6 +93,7 @@ export class TrainerService {
   constructor(log: LogFn) {
     this.log = log
     this.register(survivalLogProfile)
+    this.register(scadProfile)
   }
 
   private register(p: GameProfile): void {
@@ -116,25 +123,47 @@ export class TrainerService {
     }))
   }
 
-  /** 附加指定游戏进程并扫描主角属性字典(多候选鉴别含 3 秒动态采样) */
-  async scan(gameId: string): Promise<{ info: string }> {
+  /** 附加指定游戏进程并定位主角属性(按 profile 形态分流: 字典堆扫描 / 静态单例) */
+  async scan(gameId: string): Promise<{ info: string; hints?: string[] }> {
     const p = this.profiles.get(gameId)
     if (!p) throw new Error(`未知游戏: ${gameId}`)
     this.currentId = gameId
     this.detach()
     this.proc = GameProcess.attach(p.processName)
     this.log(`已附加 ${p.processName} (pid=${this.proc.pid})`)
-    const { handles, info } = await scanPlayerAttrs(this.proc, p, {
-      cachePath: this.cachePath,
-      log: this.log
-    })
-    this.handles = handles
-    return { info }
+    if (isAttrDictProfile(p)) {
+      const { handles, info } = await scanPlayerAttrs(this.proc, p, {
+        cachePath: this.cachePath,
+        log: this.log
+      })
+      this.handles = handles
+      this.fieldHandles = new Map()
+      return { info, hints: p.uiHints }
+    }
+    const { handles, info } = scanSingletonFields(this.proc, p, { log: this.log })
+    this.fieldHandles = handles
+    this.handles = new Map()
+    return { info, hints: p.uiHints }
   }
 
-  /** 读取主属性行(供 UI 展示); extraKeys(如移速)的上限列显示自身硬封顶字段 Max */
+  /** 读取属性行(供 UI 展示); 按 profile 形态分流 */
   getAttrs(): AttrRow[] {
     if (!this.attached) return []
+    if (!isAttrDictProfile(this.profile)) {
+      const rows: AttrRow[] = []
+      for (const def of this.profile.fields) {
+        const d = this.fieldHandles.get(def.key)?.read()
+        if (!d) continue
+        rows.push({
+          key: def.key,
+          name: def.name,
+          curDisplay: d.cur,
+          maxDisplay: d.max,
+          hasCap: false
+        })
+      }
+      return rows
+    }
     const rows: AttrRow[] = []
     for (const def of this.profile.mainKeys) {
       const h = this.handles.get(def.key)
@@ -167,8 +196,21 @@ export class TrainerService {
     return rows
   }
 
-  /** 按显示值写入当前值; 目标超过属性自身硬封顶(Max)时一并抬高(否则游戏消费侧会被封顶) */
+  /** 按显示值写入当前值; 按 profile 形态分流 */
   setAttr(key: number, displayValue: number): boolean {
+    if (!isAttrDictProfile(this.profile)) {
+      const fh = this.fieldHandles.get(key)
+      if (!fh) {
+        this.log(`[!] 写入失败: 字段键 ${key} 不在已扫描句柄中`)
+        return false
+      }
+      if (!fh.write(displayValue)) {
+        this.log('[!] 内存写入失败')
+        return false
+      }
+      this.log(`${this.keyName(key)} 已写入 ${displayValue}`)
+      return true
+    }
     const h = this.handles.get(key)
     if (!h) {
       this.log(`[!] 写入失败: 键 ${key} 不在已扫描字典中`)
@@ -188,8 +230,12 @@ export class TrainerService {
     return true
   }
 
-  /** 一键上限拉满到游戏硬封顶(profile.maxCapValue) */
+  /** 一键上限拉满到游戏硬封顶(profile.maxCapValue); 仅属性字典形态有独立上限键 */
   setMax500(key: number): boolean {
+    if (!isAttrDictProfile(this.profile)) {
+      this.log('[!] 当前游戏不支持上限键拉满')
+      return false
+    }
     const capH = this.handles.get(key + this.profile.capKeyOffset)
     if (!capH) {
       this.log(`[!] 上限键 ${key + this.profile.capKeyOffset} 不在已扫描字典中`)
@@ -223,6 +269,16 @@ export class TrainerService {
     return true
   }
 
+  /** 按显示值写目标句柄(锁定循环用); 按 profile 形态分流 */
+  private writeHandle(key: number, target: number): boolean {
+    if (!isAttrDictProfile(this.profile)) {
+      const fh = this.fieldHandles.get(key)
+      return fh ? fh.write(target) : false
+    }
+    const h = this.handles.get(key)
+    return h ? h.setBase(target * this.profile.valueScale) : false
+  }
+
   private ensureLockLoop(): void {
     if (this.locks.size === 0) {
       if (this.lockTimer) {
@@ -235,10 +291,7 @@ export class TrainerService {
     this.lockTimer = setInterval(() => {
       if (!this.attached) return
       try {
-        for (const [key, target] of this.locks) {
-          const h = this.handles.get(key)
-          if (h) h.setBase(target * this.profile.valueScale)
-        }
+        for (const [key, target] of this.locks) this.writeHandle(key, target)
       } catch {
         // 进程退出等瞬时错误, 下个周期重试
       }
@@ -249,6 +302,7 @@ export class TrainerService {
     this.locks.clear()
     this.ensureLockLoop()
     this.handles.clear()
+    this.fieldHandles.clear()
     if (this.proc) {
       this.proc.close()
       this.proc = null
@@ -259,6 +313,7 @@ export class TrainerService {
   getModConfig(gameId: string): ModConfigState {
     const p = this.profiles.get(gameId)
     const defaults: ModConfigState = {
+      supported: false,
       available: false,
       enableResize: false,
       overrides: []
@@ -276,6 +331,7 @@ export class TrainerService {
       }
     }
     return {
+      supported: true,
       available: fs.existsSync(p.modConfigPath),
       enableResize: (kv.EnableResize ?? 'false').trim().toLowerCase() === 'true',
       overrides
@@ -337,6 +393,9 @@ export class TrainerService {
   }
 
   private keyName(key: number): string {
+    if (!isAttrDictProfile(this.profile)) {
+      return this.profile.fields.find((f) => f.key === key)?.name ?? `键${key}`
+    }
     const all = [...this.profile.mainKeys, ...(this.profile.extraKeys ?? [])]
     return all.find((k) => k.key === key)?.name ?? `键${key}`
   }

@@ -54,8 +54,8 @@ app.whenReady().then(() => {
 
   ipcMain.handle(IPC.gameScan, async (_e, gameId: string): Promise<ScanResultDto> => {
     try {
-      const { info } = await trainer!.scan(gameId)
-      return { ok: true, message: info, attrs: trainer!.getAttrs() }
+      const { info, hints } = await trainer!.scan(gameId)
+      return { ok: true, message: info, attrs: trainer!.getAttrs(), hints }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       pushLog(`[!] ${msg}`)

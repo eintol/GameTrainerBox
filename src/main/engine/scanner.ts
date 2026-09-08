@@ -4,7 +4,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import type { GameProcess } from './process'
-import type { GameProfile } from '../games/types'
+import type { AttrDictProfile } from '../games/types'
 
 const ENTRY_SIZE = 24
 const WALK_LIMIT = 4096
@@ -25,7 +25,7 @@ export interface AttrValues {
 export class AttrHandle {
   constructor(
     readonly proc: GameProcess,
-    readonly profile: GameProfile,
+    readonly profile: AttrDictProfile,
     readonly addr: number
   ) {}
 
@@ -55,7 +55,7 @@ export class AttrHandle {
 }
 
 /** 读 Attr 类的 Il2CppClass 指针; 未初始化(主界面)或版本变更返回 null */
-export function getAttrKlass(proc: GameProcess, profile: GameProfile): number | null {
+export function getAttrKlass(proc: GameProcess, profile: AttrDictProfile): number | null {
   const base = proc.moduleBase(profile.moduleName)
   if (!base) return null
   const k = proc.readU64(base + profile.attrTypeInfoRva)
@@ -81,7 +81,7 @@ function validEntry(
 /** 从 entries 数组中某个 value 字段位置出发, 双向遍历整个数组; 返回 key -> attrAddr */
 export function walkDictEntries(
   proc: GameProcess,
-  profile: GameProfile,
+  profile: AttrDictProfile,
   valueFieldAddr: number
 ): Map<number, number> {
   const nameValues = new Set(profile.attrNameValues)
@@ -127,7 +127,7 @@ export function walkDictEntries(
 }
 
 /** 一遍全堆扫描: 找 entries 数组中 hash==key==key 的 entry(签名 = key+4字节零) */
-export function findEntryRefs(proc: GameProcess, profile: GameProfile, key: number): number[] {
+export function findEntryRefs(proc: GameProcess, profile: AttrDictProfile, key: number): number[] {
   const pat = Buffer.alloc(8)
   pat.writeInt32LE(key, 0)
   // 高 4 字节保持 0(pad)
@@ -146,7 +146,7 @@ export function findEntryRefs(proc: GameProcess, profile: GameProfile, key: numb
 }
 
 /** 主角字典判定: 同时含全部主键与上限键 */
-export function isPlayerDict(d: Map<number, number>, profile: GameProfile): boolean {
+export function isPlayerDict(d: Map<number, number>, profile: AttrDictProfile): boolean {
   for (const { key } of profile.mainKeys) if (!d.has(key)) return false
   for (const { key } of profile.mainKeys) if (!d.has(key + profile.capKeyOffset)) return false
   return true
@@ -201,7 +201,7 @@ export interface ScanResult {
 /** 定位主角属性字典; cachePath 传 null 则跳过缓存。多候选时用动态采样鉴别活字典(约 3 秒) */
 export async function scanPlayerAttrs(
   proc: GameProcess,
-  profile: GameProfile,
+  profile: AttrDictProfile,
   opts: { cachePath?: string; log?: (msg: string) => void } = {}
 ): Promise<ScanResult> {
   const { cachePath, log } = opts
@@ -321,7 +321,7 @@ export async function scanPlayerAttrs(
 function toHandles(
   d: Map<number, number>,
   proc: GameProcess,
-  profile: GameProfile
+  profile: AttrDictProfile
 ): Map<number, AttrHandle> {
   const out = new Map<number, AttrHandle>()
   for (const [key, addr] of d) out.set(key, new AttrHandle(proc, profile, addr))

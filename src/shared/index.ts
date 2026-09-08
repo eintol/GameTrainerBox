@@ -51,6 +51,8 @@ export interface ScanResultDto {
   ok: boolean
   message: string
   attrs: AttrRow[]
+  /** 扫描成功后 UI 表格下方的提示文案(来自 profile.uiHints) */
+  hints?: string[]
 }
 
 export interface LogEntry {
@@ -68,6 +70,8 @@ export interface ContainerOverride {
 
 /** 容器扩容 Mod 配置状态(与游戏侧 BepInEx cfg 同源) */
 export interface ModConfigState {
+  /** profile 是否接入了容器扩容功能(false = 该游戏不显示容器扩容卡片) */
+  supported: boolean
   /** 配置文件是否存在(false = 未安装 Mod 或游戏还没启动过一次) */
   available: boolean
   /** 是否启用扩容 */

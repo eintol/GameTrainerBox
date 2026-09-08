@@ -2,7 +2,7 @@
 // 版本 1.0.15690 (Unity IL2CPP, metadata v31)
 // 规格来源: Il2CppDumper dump.cs + Python 原型实测验证
 //   (归档文档: docs/2026-09-04-生存日志运行时修改器-方案与使用.md)
-import type { GameProfile } from './types'
+import type { AttrDictProfile } from './types'
 import { localEnv } from '../local-env'
 
 // AttrName 枚举全部合法值(99 个, 提取自 dump.cs, 用于 Dictionary entry 校验)
@@ -22,9 +22,10 @@ const ATTR_NAME_VALUES = [
 // 两处都没有时用占位符, Mod 配置文件不可用时 trainer 侧自动把容器扩容功能降级为不可用
 const GAME_ROOT = process.env.GTB_SURVIVAL_LOG_ROOT || localEnv('GTB_SURVIVAL_LOG_ROOT') || '<游戏安装目录>'
 
-export const survivalLogProfile: GameProfile = {
+export const survivalLogProfile: AttrDictProfile = {
   id: 'survival-log',
   name: '生存日志 (Survival Log)',
+  kind: 'attr-dict',
   processName: 'SurvivalLog.exe',
   moduleName: 'GameAssembly.dll',
   // GameCore.HotUpdate.Battle.Logic.Attr_TypeInfo (游戏更新后用 scripts/locate-attr-class.ts 重新定位;
@@ -62,5 +63,10 @@ export const survivalLogProfile: GameProfile = {
     `${GAME_ROOT}\\BepInEx\\config\\com.gametrainerbox.survivallog.containerexpand.overrides.txt`,
   // 插件生成的容器清单(id/名称/本地化名/当前格子), 进局内后完整
   modContainersPath:
-    `${GAME_ROOT}\\BepInEx\\config\\com.gametrainerbox.survivallog.containerexpand.containers.json`
+    `${GAME_ROOT}\\BepInEx\\config\\com.gametrainerbox.survivallog.containerexpand.containers.json`,
+  // 扫描成功后 UI 表格下方的提示(原 TrainerView 硬编码文案迁移至此)
+  uiHints: [
+    '填写"改为"后点该行"应用"即写入; 勾选锁定后每 0.3 秒自动写回',
+    '"健康*"为内部隐藏值, 一般不用改; 移速正常值为 3.0, 超过上限 10 时会自动抬高游戏硬封顶'
+  ]
 }
