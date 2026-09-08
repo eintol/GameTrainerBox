@@ -1,13 +1,23 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import type { Component } from 'vue'
 import { Gamepad2 } from '@lucide/vue'
 import type { AppInfo } from '@shared'
 import HomeView from './views/HomeView.vue'
-import TrainerView from './views/TrainerView.vue'
+import SurvivalLogView from './views/SurvivalLogView.vue'
+import ScadView from './views/ScadView.vue'
 
 const info = ref<AppInfo | null>(null)
 /** 当前进入的游戏 id; null = 首页 */
 const currentGameId = ref<string | null>(null)
+
+/** 游戏 id -> 专属修改页; 新增游戏适配时在此注册 */
+const gameViews: Record<string, Component> = {
+  'survival-log': SurvivalLogView,
+  scad: ScadView
+}
+
+const activeView = computed(() => (currentGameId.value ? (gameViews[currentGameId.value] ?? null) : null))
 
 onMounted(async () => {
   info.value = await window.api.getAppInfo()
@@ -40,11 +50,25 @@ onMounted(async () => {
         v-if="!currentGameId"
         @enter="currentGameId = $event"
       />
-      <TrainerView
-        v-else
-        :game-id="currentGameId"
+      <component
+        :is="activeView"
+        v-else-if="activeView"
         @back="currentGameId = null"
       />
+      <!-- profile 已注册但无专属修改页(新增游戏适配时忘了在 gameViews 注册) -->
+      <div
+        v-else
+        class="flex h-full flex-col items-center justify-center gap-3 text-sm text-gray-400"
+      >
+        <span>该游戏暂无专属修改页(未在 App.vue 的 gameViews 注册)</span>
+        <el-button
+          size="default"
+          text
+          @click="currentGameId = null"
+        >
+          返回
+        </el-button>
+      </div>
     </main>
   </div>
 </template>
