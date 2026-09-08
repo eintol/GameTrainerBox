@@ -4,7 +4,8 @@
 
 ## 项目概述
 
-GameTrainerBox：单机游戏运行时属性修改器（Electron 桌面应用）。当前适配 Survival Log（Unity IL2CPP）。
+GameTrainerBox：单机游戏运行时属性修改器（Electron 桌面应用）。当前适配 Survival Log（Unity IL2CPP）
+与 SCAD（Unity 6.3 IL2CPP，metadata v39）。
 早期 Python 原型已删除（2026-09-04），其方案与实测规格归档在 `docs/2026-09-04-生存日志运行时修改器-方案与使用.md`。
 
 ### 文档体系（活文档约定）
@@ -31,6 +32,10 @@ GameTrainerBox：单机游戏运行时属性修改器（Electron 桌面应用）
 - **引擎与游戏解耦**：`src/main/engine/` 是通用内存引擎（进程/内存/扫描），不得 import 任何具体游戏知识；
   游戏相关参数（RVA、偏移、键映射、属性名）全部放 `src/main/games/<game>/profile.ts` 数据文件
 - **koffi 只在主进程用**：FFI 调用是同步阻塞的，扫描等重操作注意别卡 UI 转发（必要时 async 包装）
+- **渲染层修改页按游戏拆分（2026-09-08）**：每游戏一个 `src/renderer/src/views/<Game>View.vue`
+  专属页面并在 `App.vue` 的 `gameViews` 注册；公共块在 `components/`
+  （AttrTable 属性表 / ContainerCard 容器卡片 / LogPanel 日志），扫描轮询复用
+  `composables/useTrainer.ts`——禁止两游戏共用同一个页面组件
 
 ## 硬性规则（2026-09-05 实测踩坑，违反必返工）
 
@@ -60,9 +65,21 @@ GameTrainerBox：单机游戏运行时属性修改器（Electron 桌面应用）
 - 属性扫描存在 模板/镜像/邻居/主角 多个同形字典（22 项 GameKey 假字典、98 项真字典并存）；
   禁止"取第一个最大"的朴素选择，必须走 scanner.ts 已实装的
   模板过滤 → 动态采样 → 上限总分排序链；缓存版本化（v2），候选歧义时不缓存
-- IL2CPP 的类名/命名空间字符串在 metadata 堆（私有 RW 内存），不在 GameAssembly 模块内
+- IL2CPP 的类名/命名空间字符串不在 GameAssembly 模块内；位置随版本变（Survival Log 在私有 RW
+  metadata 堆，SCAD/Unity 6.3 在 MEM_MAPPED 的 global-metadata.dat 映射区）——
+  类名/指针扫描覆盖全部已提交内存，指针反搜只扫 MEM_PRIVATE 提速
+- 静态单例解析（engine/singleton.ts）必须走"实例对象头 klass == 自身 klass"验证链，不做无验证偏移；
+  Unity 6.3 Il2CppClass 的 static_fields 在 0xB8（经典 0xA8，新布局三段式），以 profile.staticFieldsOffset
+  显式给出、探测 0x90..0x120 兜底
+- 分场景游戏的单例可能合理为空（SCAD 悬浮艇只在远征局内存在，基地/主界面 player=null）——
+  profile 用 optional 标记跳过，勿当故障修
+- trainer 业务层所有按键入口（读写/锁定/校验）必须区分两张句柄表：attr-dict 走 `handles`、
+  singleton 走 `fieldHandles`，新增入口后 grep 旧表名复核分流（C6：setLock 漏分流致 SCAD 锁定恒失效）
 
 **工具链**
+- Unity 6000.3+（IL2CPP metadata v39）dump：原版 Il2CppDumper 只支持到 v31，用
+  `<工具目录>\Il2CppDumper-v39\` fork 源码审查后自建（构建与 dump 命令见 docs/辅助工具使用说明.md §9）；
+  dump 退出码 82 = 结尾 ReadKey 异常，产物实际已完成，以文件为准
 - 改动 `engine/` 或 `scripts/` 后跑任何诊断，必须重建 esbuild bundle——陈旧 bundle 会"验证"旧结论
 - 给脚本包 async main 不得用字符串首尾拼接（import 会被裹进函数体报语法错）；esbuild 报错别静默吞
 - shell 链式命令里 `grep -c` 无匹配时退出码 1 会静默断掉 `&&` 链（打印 0 但后续没执行）；
@@ -84,7 +101,7 @@ GameTrainerBox：单机游戏运行时属性修改器（Electron 桌面应用）
 
 ## 游戏文件位置（加功能时需要读取）
 
-路径因机器而异，统一用占位符：`<Steam库>` = Steam 库根目录，`<游戏安装目录>` = `<Steam库>\steamapps\common\Survival Log`，`<工具目录>` = 本机辅助工具根目录（Il2CppDumper、BepInEx 插件源码等）。
+路径因机器而异，统一用占位符：`<Steam库>` = Steam 库根目录，`<游戏安装目录>` = `<Steam库>\steamapps\common\Survival Log`，`<SCAD安装目录>` = `<Steam库>\steamapps\common\SCAD`（本机由 local.env 的 `GTB_SCAD_ROOT` 指向），`<工具目录>` = 本机辅助工具根目录（Il2CppDumper、BepInEx 插件源码等）。
 
 - **游戏安装目录**: `<游戏安装目录>\`
   - `GameAssembly.dll` — IL2CPP 本体（重新 dump 的输入 1）
@@ -101,6 +118,10 @@ GameTrainerBox：单机游戏运行时属性修改器（Electron 桌面应用）
   `src/main/local-env.ts`）> 占位符 `<游戏安装目录>`；都不可用时容器扩容功能自动降级为不可用
   （见 `src/main/games/survival-log.ts`）。**新增机器相关配置一律走 local.env**——setx 对已打开的
   终端不生效，纯环境变量配置在 dev 下必然踩坑（见踩坑记录 D5）
+- **SCAD 安装目录**: `<SCAD安装目录>\`（local.env: `GTB_SCAD_ROOT`）
+  - `GameAssembly.dll` + `SCAD_Data\il2cpp_data\Metadata\global-metadata.dat`（dump 输入；
+    metadata v39 需用 fork dump，见工具链规则与 docs/辅助工具使用说明.md §9）
+  - dump 产物: `<工具目录>\Il2CppDumper\SCAD\`（加功能先 grep 这里的 dump.cs）
 
 重新 dump（游戏大版本更新后）:
 
@@ -128,6 +149,26 @@ cd <工具目录>\Il2CppDumper
   写入值超 Max 时 trainer 自动抬高 Max 字段；复验脚本 `scripts/diag-movespeed.ts`
 - 主界面时 Attr 类未初始化（TypeInfo 处是非对齐魔数），必须进存档局内才能扫描
 
+## 游戏适配（SCAD）
+
+- 版本 1.0（Unity 6000.3.14f1，IL2CPP metadata v39）。profile `src/main/games/scad.ts`
+  （singleton-fields 形态），引擎 `src/main/engine/singleton.ts`；与 Survival Log 的字典形态（attr-dict）
+  并列为 `GameProfile` 判别联合的两翼，trainer 按 kind 分流
+- 定位机制（无版本相关 RVA，类名定位方案版本无关）：全内存搜类名字符串 → 反搜指针定位
+  Il2CppClass（name@0x10）→ static_fields（profile.staticFieldsOffset=0xB8）→ 静态单例 → 实例字段；
+  解析必须走"单例对象头 klass == 自身 klass"验证链（见硬性规则与踩坑记录 C2/C4）
+- 关键规格（已实测验证，勿改动）：`InventoryController.main`（static_fields+0x0）→ resources
+  5×int @0x1C（scrap/wood/metal/fuel/plastic 各 +4）、expeditionResources @0x30；
+  `Hovercraft.player`（static_fields+0x0，**optional，仅远征局内非空**）→ currentHealth @0x2C /
+  maxHealth @0x28 / currentShield @0x94 / maxShield @0x90（float）、speed @0xA8（写入同步
+  speedCache 0xAC）；全部为内存原始值，无 valueScale 换算
+- 冒烟 `scripts/smoke-scad.ts`（加 `--write` 做写入回环验证：废料 +1 再还原，净变化为零）；
+  诊断 `scripts/diag-scad-klass.ts` / `diag-scad-probe.ts` / `diag-scad-hovercraft.ts`；
+  fork 构建与 dump 命令见 docs/辅助工具使用说明.md §9
+- 游戏大更新后：重新 dump（fork，见「游戏文件位置」）→ 核对 dump.cs 的类名/字段偏移 +
+  il2cpp.h 的 Il2CppClass 定义（static_fields 偏移可能再变）→ 冒烟验证；**无需跑 locate 脚本**
+  （没有版本相关 RVA）
+
 ## 容器扩容 Mod（BepInEx 插件）
 
 - **功能与使用见 `docs/容器扩容Mod说明.md`；GameTrainerBox 修改器侧功能见 `docs/修改器功能说明.md`**
@@ -146,3 +187,7 @@ cd <工具目录>\Il2CppDumper
 
 - 注释中文，标识符英文；ESLint + Prettier 已配置（`pnpm exec eslint . --fix` 自动修格式）
 - 提交信息：`<type>(scope): <中文摘要>`，type 用 feat/fix/refactor/docs/test/chore
+- **按功能分批提交（2026-09-08）**：独立功能各成一批（新游戏适配 / UI 重构 / bug 修复 / 文档同步），
+  禁止多个不相关功能混进同一个 commit；单文件被多个功能交叉改动时按 hunk 拆分暂存后再分别提交
+- **提交正文是 `- ` 列表**：每行一个要点、以 `- ` 开头（本批改了什么 / 验证结论 / 需留意的备注），
+  不写成长句段落；summary 保持一行概括本批功能

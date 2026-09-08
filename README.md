@@ -16,7 +16,16 @@
 
 ## 技术栈
 
-Electron 44 · Vue 3.5 · Element Plus · Tailwind CSS v4 · @lucide/vue · Vite 8 · TypeScript 5.9 · koffi（FFI 调 Windows API）
+| 分类 | 技术 | 说明 |
+|---|---|---|
+| 桌面框架 | Electron 44 | 主进程（内存引擎）+ 渲染进程（UI），sandbox + contextIsolation |
+| UI 框架 | Vue 3.5 | 渲染进程纯 Vue，不接触 Node |
+| 组件库 | Element Plus | 表格 / 表单 / 对话框 |
+| 样式 | Tailwind CSS v4 | 无 tailwind.config.js，按层引入与 Element Plus 共存 |
+| 图标 | @lucide/vue | — |
+| 构建 | Vite 8 + electron-vite 5 | 三端统一构建，主进程改动需重启、渲染进程热重载 |
+| 语言 | TypeScript 5.9 | 锁定 5.x（vue-tsc 3.3 尚不兼容 TS 7） |
+| 进程交互 | koffi | FFI 调 Windows API（进程/模块/内存读写），仅主进程使用 |
 
 ## 快速开始
 
