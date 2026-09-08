@@ -258,7 +258,9 @@ export class TrainerService {
   /** 开关锁定; enabled=true 时以 target 为目标高频写回 */
   setLock(key: number, enabled: boolean, target: number): boolean {
     if (enabled) {
-      if (!this.handles.has(key)) return false
+      // 句柄表按 profile 形态分流: 字典式在 handles, 单例式在 fieldHandles, 查错表会恒 false
+      const known = isAttrDictProfile(this.profile) ? this.handles.has(key) : this.fieldHandles.has(key)
+      if (!known) return false
       this.locks.set(key, target)
       this.log(`${this.keyName(key)} 已锁定为 ${target}`)
     } else {
