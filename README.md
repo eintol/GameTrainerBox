@@ -2,17 +2,28 @@
 
 **单机游戏运行时修改器盒子** — A desktop trainer box for single-player games: a generic runtime memory engine plus per-game adapter profiles, built with Electron + Vue 3.
 
-当前适配：**生存日志（Survival Log）**（Unity IL2CPP，实测 v1.0.15690 / 1.0.15704）。
+当前适配：**生存日志（Survival Log）**（Unity IL2CPP，实测 v1.0.15690 / 1.0.15704）与 **SCAD**（Unity 6000.3.14f1，IL2CPP metadata v39，实测 v1.0）。
 
 <!-- TODO: 补运行界面截图/GIF（属性面板 + 容器扩容卡片），存放于 docs/screenshots/ -->
 
 ## 功能
 
-- 附加运行中的游戏进程，全堆签名扫描定位主角属性字典（约 4 秒，重扫走缓存 0.2 秒）
+**生存日志（Survival Log）**
+
+- 附加运行中的游戏进程，全堆签名扫描定位主角属性字典（首次约 2~4 秒，同局重扫走缓存 0.2 秒）
 - 五维属性（生命/饱食度/士气/体力/健康）+ 人物移速 实时查看、修改、锁定（0.3s 写回）
 - 一键「上限→500」拉满属性上限（自动处理游戏硬封顶字段）
+
+**SCAD**
+
+- 资源五项（废料/木材/金属/燃料/塑料）实时查看、修改、锁定——基地 / 主界面 / 远征均可
+- 载具生命 / 护盾 / 移速 实时查看、修改、锁定——仅远征局内（悬浮艇生成后），生命/护盾支持一键「拉满」
+- 定位走静态单例链（全内存类名搜索 + klass 验证，首次约 5~8 秒，无缓存）
+
+**通用**
+
 - 修改随游戏存档持久化（改后游戏内正常存档一次即可）
-- **容器扩容**：背包与所有家具容器/仓库的格子数按容器独立设置（配套 BepInEx 插件，修改器界面一键调整，游戏运行中 3 秒内热生效；从游戏数据源头修改，存档安全）
+- **容器扩容**（仅生存日志）：背包与所有家具容器/仓库的格子数按容器独立设置（配套 BepInEx 插件，修改器界面一键调整，游戏运行中 3 秒内热生效；从游戏数据源头修改，存档安全）
 
 ## 技术栈
 
@@ -53,15 +64,17 @@ pnpm build:win      # 打包 NSIS 安装包（out/ + electron-builder）
 ## 工作原理
 
 1. 主进程通过 koffi 调用 kernel32（进程/模块/区域枚举、内存读写）
-2. 游戏进入存档局内后，对进程堆做 IL2CPP Dictionary 签名扫描，多级鉴别链定位主角属性字典（过滤模板/镜像/邻居等同形假字典）
-3. **引擎与游戏知识完全分离**：`src/main/engine/` 是通用内存引擎，不含任何具体游戏逻辑；每个游戏在 `src/main/games/` 有一个 profile（TypeInfo RVA、字段偏移、属性键映射等纯数据）
+2. 定位机制按游戏 profile 的形态分流：
+   - **attr-dict 字典形态**（Survival Log）：游戏进入存档局内后，对进程堆做 IL2CPP Dictionary 签名扫描，多级鉴别链定位主角属性字典（过滤模板/镜像/邻居等同形假字典）
+   - **singleton-fields 静态单例形态**（SCAD）：全内存搜类名字符串 → 反搜指针定位 Il2CppClass → static_fields → 静态单例（对象头 klass 强验证）→ 实例字段，无版本相关 RVA
+3. **引擎与游戏知识完全分离**：`src/main/engine/` 是通用内存引擎，不含任何具体游戏逻辑；每个游戏在 `src/main/games/` 有一个 profile（attr-dict / singleton-fields 两形态的判别联合），包含定位参数、字段偏移、属性键映射等纯数据
 4. 渲染进程是纯 Vue（sandbox + contextIsolation 开启），只通过 contextBridge 白名单 API 调用主进程
 
 架构细节与适配红线见 [CLAUDE.md](CLAUDE.md)。
 
 ## 添加新游戏
 
-核心设计：**加一个游戏 = 在 `src/main/games/` 加一个 profile 数据文件**，引擎代码零改动。完整流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+核心设计：**加一个游戏 = 在 `src/main/games/` 加一个 profile 数据文件**（按目标数据形态选 attr-dict 或 singleton-fields），引擎代码零改动。完整流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 开发者文档
 
