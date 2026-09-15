@@ -18,7 +18,7 @@
 |---|---|---|
 | BepInEx 6 BE (be.788) IL2CPP win-x64 | 游戏根目录（`winhttp.dll` + `dotnet\` + `BepInEx\`） | 注入框架；Unity 6 必须 BE 构建 |
 | SLContainerExpand 插件 | `BepInEx\plugins\SLContainerExpand.dll` | 本体（C# 插件源码未随本仓库发布，构建部署见「辅助工具使用说明」） |
-| interop 程序集 | `BepInEx\interop\` | BepInEx 首启自动生成（勿手改；游戏大更新后删掉重新生成） |
+| interop 程序集 | `BepInEx\interop\` | BepInEx 首启自动生成；游戏更新后 InteropManager 检测过期自动重建（勿手改，仅加载异常时才手动删重启） |
 
 卸载：删除游戏根目录的 `winhttp.dll`、`doorstop_config.ini`、`.doorstop_version`、`dotnet\`、`BepInEx\` 即完全还原。
 
@@ -51,8 +51,9 @@ GameTrainerBox 的容器扩容卡片 = 本 Mod 的图形前端：添加容器 �
 
 ## 兼容性
 
-- 已验证：游戏 1.0.15704（Unity 6000.2.0a1, IL2CPP metadata v31）+ BepInEx 6.0.0-be.788
-- **游戏大版本更新后**：①重新 dump（Il2CppDumper）②删 `BepInEx\interop`、`unity-libs` 重启游戏重新生成
+- 已验证：游戏 1.0.15704 及 2026-09-15 更新（buildid 25269320, Unity 6000.2.0a1, IL2CPP metadata v31）+ BepInEx 6.0.0-be.788
+- **游戏大版本更新后**：①重新 dump（Il2CppDumper）②启动游戏，InteropManager 自动重生成 interop
+  （2026-09-15 实测；仅当插件加载异常才手动删 `BepInEx\interop`、`unity-libs` 重启）
   ③跑 `GameTrainerBox/scripts/locate-attr-class.ts` 重定位属性 RVA（与 Mod 无关但同批做）
   ④进局验证容器清单与热生效
 - BepInEx 升级：换包后同样删 interop/unity-libs 重新生成
