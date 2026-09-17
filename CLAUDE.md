@@ -205,6 +205,8 @@ cd <工具目录>\Il2CppDumper
   不写成长句段落；summary 保持一行概括本批功能
 - **提交信息不写验证结论**：正文里不要出现"验证 xx 通过 / typecheck 通过"之类的内容，
   验证结果在会话回复里报告即可，不进 commit message
+- **提交信息不加署名 trailer（2026-09-17）**：禁止追加 `Co-Authored-By: xxx`、`Generated with xxx`
+  这类署名/工具落款，提交信息只留 summary 与 `- ` 要点正文
 - **提交后同步版本号（2026-09-17）**：应用版本号唯一来源是 `package.json` 的 `version`
   （UI 顶栏显示与打包产物命名都由它派生），按 SemVer 随提交类型 bump——新功能 → MINOR
   （0.1.0 → 0.2.0），仅修复 → PATCH（0.2.0 → 0.2.1），破坏性变更 → MAJOR，纯文档 / 重构 / 杂务不动；

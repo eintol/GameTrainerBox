@@ -35,6 +35,8 @@ pnpm lint           # 提交前必跑
 - 提交信息：`<type>(scope): <中文摘要>`，type 用 feat/fix/refactor/docs/test/chore
 - 注释中文、标识符英文；ESLint + Prettier 已配置（`pnpm exec eslint . --fix` 自动修格式）
 - 提交前 `pnpm typecheck` + `pnpm lint` 全绿
+- **提交信息不加署名 trailer**：禁止追加 `Co-Authored-By: xxx`、`Generated with xxx` 这类署名/工具落款，
+  提交信息只留 summary 与 `- ` 要点正文
 - **版本号同步**：应用版本号唯一来源是 `package.json` 的 `version`（UI 顶栏与打包产物命名都由它派生），
   按 SemVer 随提交类型 bump——新功能 → MINOR，仅修复 → PATCH，破坏性变更 → MAJOR，
   纯文档 / 重构 / 杂务不动；bump 时同批把 CHANGELOG 的 Unreleased 条目归档为 `## [x.y.z] - 日期` 段
