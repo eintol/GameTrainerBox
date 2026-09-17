@@ -185,10 +185,12 @@ export class TrainerService {
       if (!h) continue
       const d = h.read()
       if (!d) continue
+      // 加成类属性(如储电倍率 10004)的有效值 = base + 强化, 显示总值而非单看 base
+      const cur = def.includesStrengthening ? d.base + d.strengthening : d.base
       rows.push({
         key: def.key,
         name: def.name,
-        curDisplay: d.base / this.profile.valueScale,
+        curDisplay: cur / this.profile.valueScale,
         maxDisplay: d.max / this.profile.valueScale,
         hasCap: false
       })
@@ -216,8 +218,8 @@ export class TrainerService {
       this.log(`[!] 写入失败: 键 ${key} 不在已扫描字典中`)
       return false
     }
-    const base = Math.round(displayValue * this.profile.valueScale)
     const d = h.read()
+    const base = this.displayToBase(key, displayValue, d?.strengthening ?? 0)
     if (d && base > d.max && !h.setMaxField(base)) {
       this.log('[!] 硬封顶字段写入失败')
       return false
@@ -271,6 +273,19 @@ export class TrainerService {
     return true
   }
 
+  /**
+   * 显示值 -> 待写入 base 内存值。
+   * 加成类属性(extraKeys 里标了 includesStrengthening, 如储电倍率 10004)的有效值 = base + 强化,
+   * 强化由游戏侧(天赋)给, 所以写入时要扣掉, 才能让写入后 (base+强化) 等于目标显示值
+   */
+  private displayToBase(key: number, displayValue: number, strengthening: number): number {
+    const p = this.profile
+    if (!isAttrDictProfile(p)) return Math.round(displayValue) // 单例形态不走这条路径
+    const def = [...p.mainKeys, ...(p.extraKeys ?? [])].find((k) => k.key === key)
+    const offset = def?.includesStrengthening ? strengthening : 0
+    return Math.round(displayValue * p.valueScale) - offset
+  }
+
   /** 按显示值写目标句柄(锁定循环用); 按 profile 形态分流 */
   private writeHandle(key: number, target: number): boolean {
     if (!isAttrDictProfile(this.profile)) {
@@ -278,7 +293,9 @@ export class TrainerService {
       return fh ? fh.write(target) : false
     }
     const h = this.handles.get(key)
-    return h ? h.setBase(target * this.profile.valueScale) : false
+    if (!h) return false
+    const d = h.read()
+    return h.setBase(this.displayToBase(key, target, d?.strengthening ?? 0))
   }
 
   private ensureLockLoop(): void {

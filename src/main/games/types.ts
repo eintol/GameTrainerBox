@@ -25,6 +25,13 @@ export interface GameProfileBase {
 export interface AttrKeyDef {
   key: number
   name: string
+  /**
+   * 有效值 = base + strengthening(而非只看 base)。
+   * 用于"加成类"属性: 如储电容量倍率 10004, 强化值由天赋/装备提供, 玩家侧只能改 base。
+   * 开启后: 显示 (base+强化)/valueScale; 写入按"目标总值 - 强化"折算 base;
+   * 「拉满」写 (Max 字段值 - 强化), 对应游戏内建上限
+   */
+  includesStrengthening?: boolean
 }
 
 export interface AttrOffsets {

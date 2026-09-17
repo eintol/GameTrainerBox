@@ -54,7 +54,14 @@ export const survivalLogProfile: AttrDictProfile = {
   maxCapValue: 500,
   // 移速(AttrName.MoveSpeed=401, 无上限键 501): 1.0.15704 实测 正常 base=3000(显示 3.0),
   // 硬封顶 Attr.Max=10000(显示 10.0), Min=-500; 显示值 = base/1000, 写入超 Max 时 trainer 自动抬 Max
-  extraKeys: [{ key: 401, name: '移速' }],
+  extraKeys: [
+    { key: 401, name: '移速' },
+    // 储电容量倍率(AttrName.PowerStorage_Ratio=10004): PowerManager 的
+    // TotalCapacity = Σ(储电设备容量) × (1 + 该属性值/1000) —— 反汇编实测读的就是它,
+    // 即游戏内电力面板「储电设备」显示的总上限。1.0.16756 实测 base=0 / 强化=500(天赋提供)
+    // / Max=2000(显示 2.0 为游戏内建封顶) / Min=-500; 强化由游戏侧给, 故按总值显示与折算写入
+    { key: 10004, name: '储电容量倍率', includesStrengthening: true }
+  ],
   attrNameValues: ATTR_NAME_VALUES,
   // 容器扩容 Mod(BepInEx 插件, 源码与构建部署见 docs/辅助工具使用说明.md)的配置文件
   modConfigPath:
@@ -68,6 +75,7 @@ export const survivalLogProfile: AttrDictProfile = {
   // 扫描成功后 UI 表格下方的提示(原 TrainerView 硬编码文案迁移至此)
   uiHints: [
     '填写"改为"后点该行"应用"即写入; 勾选锁定后每 0.3 秒自动写回',
-    '"健康*"为内部隐藏值, 一般不用改; 移速正常值为 3.0, 超过上限 10 时会自动抬高游戏硬封顶'
+    '"健康*"为内部隐藏值, 一般不用改; 移速正常值为 3.0, 超过上限 10 时会自动抬高游戏硬封顶',
+    '"储电容量倍率"是加成比例(填 1 = 储电设备总上限翻倍, 填 0 = 无加成), 值含天赋强化, 游戏在下次电力结算时重算生效'
   ]
 }
