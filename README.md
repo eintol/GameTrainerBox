@@ -2,7 +2,7 @@
 
 **单机游戏运行时修改器盒子** — A desktop trainer box for single-player games: a generic runtime memory engine plus per-game adapter profiles, built with Electron + Vue 3.
 
-当前适配：**生存日志（Survival Log）**（Unity IL2CPP，实测 v1.0.15690 / 1.0.15704）与 **SCAD**（Unity 6000.3.14f1，IL2CPP metadata v39，实测 v1.0）。
+当前适配：**生存日志（Survival Log）**（Unity IL2CPP，实测 v1.0.16756）与 **SCAD**（Unity 6000.3.14f1，IL2CPP metadata v39，实测 v1.0）。
 
 <!-- TODO: 补运行界面截图/GIF（属性面板 + 容器扩容卡片），存放于 docs/screenshots/ -->
 

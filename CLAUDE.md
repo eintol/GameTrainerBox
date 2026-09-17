@@ -79,7 +79,8 @@ GameTrainerBox：单机游戏运行时属性修改器（Electron 桌面应用）
 **工具链**
 - Unity 6000.3+（IL2CPP metadata v39）dump：原版 Il2CppDumper 只支持到 v31，用
   `<工具目录>\Il2CppDumper-v39\` fork 源码审查后自建（构建与 dump 命令见 docs/辅助工具使用说明.md §9）；
-  dump 退出码 82 = 结尾 ReadKey 异常，产物实际已完成，以文件为准
+  dump 退出码异常（原版 0xE0434352 / fork 82 = 结尾 ReadKey）不代表失败，产物已完成，以文件为准；
+  游戏运行中也能 dump（纯只读，不必先关游戏）
 - 改动 `engine/` 或 `scripts/` 后跑任何诊断，必须重建 esbuild bundle——陈旧 bundle 会"验证"旧结论
 - 给脚本包 async main 不得用字符串首尾拼接（import 会被裹进函数体报语法错）；esbuild 报错别静默吞
 - shell 链式命令里 `grep -c` 无匹配时退出码 1 会静默断掉 `&&` 链（打印 0 但后续没执行）；

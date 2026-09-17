@@ -51,7 +51,7 @@ GameTrainerBox 的容器扩容卡片 = 本 Mod 的图形前端：添加容器 �
 
 ## 兼容性
 
-- 已验证：游戏 1.0.15704 及 2026-09-15 更新（1.0.16363, Unity 6000.2.0a1, IL2CPP metadata v31）+ BepInEx 6.0.0-be.788
+- 已验证：游戏 1.0.15704 及后续历次更新（最新 **1.0.16756**, 2026-09-17；Unity 6000.2.0a1, IL2CPP metadata v31）+ BepInEx 6.0.0-be.788
 - **游戏大版本更新后**：①重新 dump（Il2CppDumper）②启动游戏，InteropManager 自动重生成 interop
   （2026-09-15 实测；仅当插件加载异常才手动删 `BepInEx\interop`、`unity-libs` 重启）
   ③跑 `GameTrainerBox/scripts/locate-attr-class.ts` 重定位属性 RVA（与 Mod 无关但同批做）

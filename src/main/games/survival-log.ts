@@ -1,5 +1,5 @@
 // Survival Log(生存日志) 适配器 profile
-// 版本 1.0.16363 (Unity IL2CPP, metadata v31; 2026-09-15 适配, 旧版 1.0.15690/1.0.15704)
+// 版本 1.0.16756 (Unity IL2CPP, metadata v31; 2026-09-17 适配, 旧版 1.0.15690/1.0.15704/1.0.16363)
 // 规格来源: Il2CppDumper dump.cs + Python 原型实测验证
 //   (归档文档: docs/2026-09-04-生存日志运行时修改器-方案与使用.md)
 import type { AttrDictProfile } from './types'
@@ -30,9 +30,9 @@ export const survivalLogProfile: AttrDictProfile = {
   moduleName: 'GameAssembly.dll',
   // GameCore.HotUpdate.Battle.Logic.Attr_TypeInfo (游戏更新后用 scripts/locate-attr-class.ts 重新定位;
   // script.json 的 ScriptMetadata.Address 在 1.0.15704 上与运行时槽位差 8~24 字节, 勿再使用)
-  // 2026-09-15 定位 (1.0.16363, buildid 25269320): 0x53b2190 (旧 1.0.15704 为 0x538bf00; 本次更新 Attr 字段偏移
-  // 与 AttrName 99 枚举值均无变化, 仅 TypeInfo 槽位漂移)
-  attrTypeInfoRva: 0x53b2190,
+  // 2026-09-17 定位 (1.0.16756, buildid 25366138): 0x53b6340 (旧 1.0.16363 为 0x53b2190; 本次更新 Attr 字段偏移
+  // 与 AttrName 99 枚举值均无变化, 仅 TypeInfo 槽位漂移 —— 与前几次小更新同一模式)
+  attrTypeInfoRva: 0x53b6340,
   attrOffsets: {
     base: 0x10,
     strengthening: 0x14,
