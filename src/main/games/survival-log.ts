@@ -44,10 +44,10 @@ export const survivalLogProfile: AttrDictProfile = {
   valueScale: 1000,
   // 实测 UI 映射: 游戏"生命"条 = 键 5 (Vitality); 键 4 (Health) 界面无对应条(隐藏健康值)
   mainKeys: [
+    { key: 1, name: '饱腹' },
+    { key: 2, name: '心态' },
+    { key: 3, name: '精力' },
     { key: 5, name: '生命' },
-    { key: 1, name: '饱食度' },
-    { key: 2, name: '士气' },
-    { key: 3, name: '体力' },
     { key: 4, name: '健康*' }
   ],
   capKeyOffset: 100,
