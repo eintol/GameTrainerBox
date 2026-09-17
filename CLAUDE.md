@@ -59,8 +59,10 @@ GameTrainerBox：单机游戏运行时属性修改器（Electron 桌面应用）
 - 游戏运行时插件 DLL 被锁；部署用"直接重试拷贝直到成功"循环，不用进程检测做前置条件
 
 **内存 / 引擎**
-- 禁止对 Il2CppClass/托管对象的内存布局做偏移假设（Unity 6.2 alpha 上 name@0x10 等假设已实测失败）；
-  类定位一律走 `scripts/locate-attr-class.ts` 流程（堆搜字符串 → klass 投票 → 模块反搜 → 自动验证）
+- 禁止对 Il2CppClass/托管对象的内存布局做偏移假设（布局随 Unity 版本变：Unity 6.2 alpha 上
+  name@0x10 读出垃圾，Survival Log/metadata v31 实测成立）——偏移先用已知 klass 探测再使用；
+  类定位一律走 `scripts/locate-attr-class.ts` 流程（堆搜字符串 → klass 投票 → 模块反搜 → 自动验证）；
+  字符串指针（metadata 字符串堆地址天然不对齐）只做范围检查，对齐校验只给对象/结构指针
 - script.json 的 ScriptMetadata.Address 实测与运行时槽位差 8~24 字节，RVA 以 locate 脚本输出为准
 - 属性扫描存在 模板/镜像/邻居/主角 多个同形字典（22 项 GameKey 假字典、98 项真字典并存）；
   禁止"取第一个最大"的朴素选择，必须走 scanner.ts 已实装的
@@ -148,6 +150,12 @@ cd <工具目录>\Il2CppDumper
   （不得塞进 mainKeys，否则 isPlayerDict 会要求不存在的键 501 导致鉴别全挂）；
   1.0.15704 实测正常 base=3000（显示 3.0）、硬封顶 Attr.Max=10000（显示 10.0）、Min=-500；
   写入值超 Max 时 trainer 自动抬高 Max 字段；复验脚本 `scripts/diag-movespeed.ts`
+- 储电上限 = 键 10004 (AttrName.PowerStorage_Ratio)，同走 `extraKeys` 且标
+  `includesStrengthening`（有效值 = base+强化，强化由天赋给，写入按总值折算 base）：
+  游戏内电力面板「储电设备」总上限 = Σ(储电设备容量) × (1 + 有效值/1000)，1.0.16756 实测
+  Max=2000（显示 2.0，即总上限 3 倍为游戏内建封顶）。**只改属性、别写 PowerManager.TotalCapacity
+  ——后者按 tick 重算会覆盖**；属性随存档持久化（AgentSave.AttrDict），改完下次电力结算生效
+  （实测约 1 秒）；诊断脚本 `scripts/diag-power-storage.ts` / `diag-power-write.ts`
 - 主界面时 Attr 类未初始化（TypeInfo 处是非对齐魔数），必须进存档局内才能扫描
 
 ## 游戏适配（SCAD）
