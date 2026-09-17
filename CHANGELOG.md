@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-17
+
 ### 新增
 
 - 人物移速调整：属性表新增「移速」行（AttrName.MoveSpeed=401，同字典附加键机制 `extraKeys`），
