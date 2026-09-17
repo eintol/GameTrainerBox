@@ -77,6 +77,9 @@ GameTrainerBox：单机游戏运行时属性修改器（Electron 桌面应用）
   profile 用 optional 标记跳过，勿当故障修
 - trainer 业务层所有按键入口（读写/锁定/校验）必须区分两张句柄表：attr-dict 走 `handles`、
   singleton 走 `fieldHandles`，新增入口后 grep 旧表名复核分流（C6：setLock 漏分流致 SCAD 锁定恒失效）
+- 扫描句柄的生命周期归主进程（`lastScan` 凭据 + `getTrainerState`）：视图会被 `v-if` 卸载，
+  扫描结果与锁定开关不在组件里放；游戏没关时再进修改页直接复用（毫秒级），复用前必须走校验链
+  （pid 存活 + 字典锚点重走 / 单例指针链），失效才退回完整扫描（E4）
 
 **工具链**
 - Unity 6000.3+（IL2CPP metadata v39）dump：原版 Il2CppDumper 只支持到 v31，用

@@ -13,14 +13,17 @@ const props = defineProps<{
   scanned: boolean
   /** 表格下方提示文案(来自 profile.uiHints) */
   hints: string[]
+  /** 复用上次扫描但结果不完整时的提示(如部分字段不在当前场景) */
+  note?: string
 }>()
+
+/** 锁定开关状态由父组件持有: 复用上次扫描时需从主进程恢复, 不能是表格局部状态 */
+const locks = defineModel<Record<number, boolean>>('locks', { required: true })
 
 const emit = defineEmits<{ (e: 'refresh'): void }>()
 
 /** 每行的"改为"输入 */
 const edits = reactive<Record<number, string>>({})
-/** 每行锁定开关 */
-const locks = reactive<Record<number, boolean>>({})
 
 /** 应用单行: 把该行"改为"输入的显示值写入内存 */
 async function onApplyRow(key: number): Promise<void> {
@@ -59,6 +62,8 @@ async function onLockChange(key: number, enabled: boolean): Promise<void> {
   const target = txt !== '' && !Number.isNaN(Number(txt)) ? Number(txt) : row.curDisplay
   const ok = await window.api.setLock(key, enabled, target)
   if (ok) playSuccess()
+  // 主进程拒绝(键不在句柄表等)时回滚开关, 保持界面与主进程一致
+  locks.value[key] = ok ? enabled : !enabled
 }
 
 function fmt(v: number | null): string {
@@ -134,7 +139,7 @@ function fmt(v: number | null): string {
       >
         <template #default="{ row }">
           <el-switch
-            v-model="locks[row.key]"
+            :model-value="locks[row.key] === true"
             size="small"
             :disabled="!scanned"
             @change="(v: boolean | string | number) => onLockChange(row.key, Boolean(v))"
@@ -175,6 +180,12 @@ function fmt(v: number | null): string {
       <span class="text-xs text-gray-500">
         {{ hints.join('；') }}
       </span>
+    </div>
+    <div
+      v-if="scanned && note"
+      class="mt-2 text-xs text-amber-600"
+    >
+      {{ note }}
     </div>
   </section>
 </template>

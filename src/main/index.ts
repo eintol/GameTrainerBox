@@ -1,7 +1,15 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { IPC } from '../shared'
-import type { AppInfo, AttrRow, GameMeta, LogEntry, ModConfigPatch, ScanResultDto } from '../shared'
+import type {
+  AppInfo,
+  AttrRow,
+  GameMeta,
+  LogEntry,
+  ModConfigPatch,
+  ScanResultDto,
+  TrainerStateDto
+} from '../shared'
 import { TrainerService } from './trainer'
 
 let trainer: TrainerService | null = null
@@ -60,6 +68,16 @@ app.whenReady().then(() => {
       const msg = e instanceof Error ? e.message : String(e)
       pushLog(`[!] ${msg}`)
       return { ok: false, message: msg, attrs: [] }
+    }
+  })
+
+  ipcMain.handle(IPC.gameTrainerState, (_e, gameId: string): TrainerStateDto => {
+    try {
+      return trainer!.getTrainerState(gameId)
+    } catch (e) {
+      // 查询失败按"无可用结果"处理, 由渲染层走正常扫描路径
+      pushLog(`[!] 查询扫描状态失败: ${e instanceof Error ? e.message : String(e)}`)
+      return { scanned: false, message: '', attrs: [], hints: [], lockedKeys: [] }
     }
   })
 

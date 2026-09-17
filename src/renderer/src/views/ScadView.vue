@@ -7,7 +7,7 @@ import { useTrainer } from '../composables/useTrainer'
 
 const emit = defineEmits<{ (e: 'back'): void }>()
 
-const { meta, scanning, scanned, rows, hints, onScan, refresh } = useTrainer('scad')
+const { meta, scanning, scanned, rows, hints, locks, note, onScan, refresh } = useTrainer('scad')
 </script>
 
 <template>
@@ -22,9 +22,11 @@ const { meta, scanning, scanned, rows, hints, onScan, refresh } = useTrainer('sc
     />
 
     <AttrTable
+      v-model:locks="locks"
       :rows="rows"
       :scanned="scanned"
       :hints="hints"
+      :note="note"
       @refresh="refresh"
     />
 

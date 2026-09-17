@@ -9,13 +9,16 @@ import type {
   LogEntry,
   ModConfigPatch,
   ModConfigState,
-  ScanResultDto
+  ScanResultDto,
+  TrainerStateDto
 } from '../shared'
 
 const api: GameTrainerBoxApi = {
   getAppInfo: (): Promise<AppInfo> => ipcRenderer.invoke(IPC.appInfo),
   listGames: (): Promise<GameMeta[]> => ipcRenderer.invoke(IPC.gameList),
   scanGame: (gameId: string): Promise<ScanResultDto> => ipcRenderer.invoke(IPC.gameScan, gameId),
+  getTrainerState: (gameId: string): Promise<TrainerStateDto> =>
+    ipcRenderer.invoke(IPC.gameTrainerState, gameId),
   getAttrs: (): Promise<AttrRow[]> => ipcRenderer.invoke(IPC.gameGetAttrs),
   setAttr: (key: number, value: number): Promise<boolean> =>
     ipcRenderer.invoke(IPC.gameSetAttr, key, value),

@@ -3,13 +3,28 @@ import { app } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
 import { GameProcess } from './engine/process'
-import { AttrHandle, scanPlayerAttrs } from './engine/scanner'
+import {
+  AttrHandle,
+  getAttrKlass,
+  isPlayerDict,
+  scanPlayerAttrs,
+  validateDict,
+  walkDictEntries
+} from './engine/scanner'
 import { SingletonFieldHandle, scanSingletonFields } from './engine/singleton'
-import type { GameProfile } from './games/types'
+import type { ResolvedSingleton } from './engine/singleton'
+import type { AttrDictProfile, GameProfile, SingletonProfile } from './games/types'
 import { survivalLogProfile } from './games/survival-log'
 import { scadProfile } from './games/scad'
 import { isAttrDictProfile } from './games/types'
-import type { ContainerInfo, ContainerOverride, GameMeta, ModConfigPatch, ModConfigState } from '../shared'
+import type {
+  ContainerInfo,
+  ContainerOverride,
+  GameMeta,
+  ModConfigPatch,
+  ModConfigState,
+  TrainerStateDto
+} from '../shared'
 
 export type LogFn = (msg: string) => void
 
@@ -87,6 +102,21 @@ export class TrainerService {
   private currentId: string | null = null
   /** 锁定表: key -> 目标显示值 */
   private locks = new Map<number, number>()
+  /**
+   * 上次扫描的复用凭据: 修改页每次进入先问 getTrainerState, 凭据仍能校验通过就直接复用
+   * (游戏没关时不必重跑全堆/全内存扫描); 进程重启、重进存档、回主界面都会让它失效
+   */
+  private lastScan: {
+    gameId: string
+    pid: number
+    info: string
+    /** 字典形态: 命中的 entries 锚点(entry 起始地址) */
+    anchor?: number
+    /** 单例形态: 各单例的解析链 */
+    singletons?: ResolvedSingleton[]
+    /** 上次被跳过的单例 id(optional 场景为空), 非空说明复用结果不完整 */
+    skipped?: string[]
+  } | null = null
   private lockTimer: NodeJS.Timeout | null = null
   private log: LogFn
 
@@ -132,18 +162,111 @@ export class TrainerService {
     this.proc = GameProcess.attach(p.processName)
     this.log(`已附加 ${p.processName} (pid=${this.proc.pid})`)
     if (isAttrDictProfile(p)) {
-      const { handles, info } = await scanPlayerAttrs(this.proc, p, {
+      const { handles, info, anchor } = await scanPlayerAttrs(this.proc, p, {
         cachePath: this.cachePath,
         log: this.log
       })
       this.handles = handles
       this.fieldHandles = new Map()
+      this.lastScan = { gameId, pid: this.proc.pid, info, anchor }
       return { info, hints: p.uiHints }
     }
-    const { handles, info } = scanSingletonFields(this.proc, p, { log: this.log })
+    const { handles, info, resolved, skipped } = scanSingletonFields(this.proc, p, { log: this.log })
     this.fieldHandles = handles
     this.handles = new Map()
+    this.lastScan = { gameId, pid: this.proc.pid, info, singletons: resolved, skipped }
     return { info, hints: p.uiHints }
+  }
+
+  /**
+   * 查询当前扫描状态(修改页进入时调用): 游戏没关、句柄仍有效时直接给现有结果, 不重新扫描;
+   * scanned=false 时调用方再走 scan()
+   */
+  getTrainerState(gameId: string): TrainerStateDto {
+    const p = this.profiles.get(gameId)
+    if (!p) return { scanned: false, message: '', attrs: [], hints: [], lockedKeys: [] }
+    if (!this.canReuse(gameId, p)) {
+      // 扫描过但句柄已失效时说明原因, 免得用户以为是白扫一遍
+      if (this.lastScan?.gameId === gameId) {
+        this.log('上次扫描结果已失效(游戏可能重进存档或回主界面), 重新定位属性')
+      }
+      return { scanned: false, message: '', attrs: [], hints: [], lockedKeys: [] }
+    }
+    this.log(`复用上次扫描结果 (pid=${this.proc!.pid}, 未重新扫描)`)
+    return {
+      scanned: true,
+      message: this.lastScan?.info ?? '',
+      attrs: this.getAttrs(),
+      hints: p.uiHints ?? [],
+      lockedKeys: [...this.locks.keys()],
+      note: this.reuseNote(p)
+    }
+  }
+
+  /**
+   * 复用判定: 同一游戏 + 进程未重启 + 上次扫描凭据仍校验通过。
+   * 进程重启(pid 变)、重进存档(字典/单例换实例)、回主界面(Attr 类未初始化)都会让旧句柄
+   * 指向失效内存, 必须重新扫描 —— 校验链只是几次读内存, 代价远低于重扫
+   */
+  private canReuse(gameId: string, p: GameProfile): boolean {
+    const proc = this.proc
+    if (!proc || this.currentId !== gameId || !this.attached || !this.lastScan) return false
+    if (this.lastScan.gameId !== gameId) return false
+    // pid 相同也可能是系统复用了 pid, 由后续校验链兜底
+    if (!GameProcess.findPids(p.processName).includes(proc.pid)) return false
+    return isAttrDictProfile(p) ? this.verifyDict(p, proc) : this.verifySingletons(p, proc)
+  }
+
+  /**
+   * 字典形态校验: 重走锚点(毫秒级)确认字典还在原地址、每项对应的属性实例地址未变
+   * (重进存档会换一批实例); 没有锚点记录时退化为按对象头 klass 抽样校验
+   */
+  private verifyDict(p: AttrDictProfile, proc: GameProcess): boolean {
+    if (this.handles.size === 0) return false
+    const klass = getAttrKlass(proc, p)
+    if (!klass) return false // Attr 类未初始化(主界面/未进局)
+    const anchor = this.lastScan?.anchor
+    if (anchor !== undefined) {
+      // 锚点是 entry 起点, walkDictEntries 的入口是 value 字段位置(+16)
+      const d = walkDictEntries(proc, p, anchor + 16)
+      if (!isPlayerDict(d, p) || d.size !== this.handles.size) return false
+      for (const [key, addr] of d) if (this.handles.get(key)?.addr !== addr) return false
+      return true
+    }
+    return validateDict(
+      proc,
+      klass,
+      new Map([...this.handles].map(([k, h]) => [k, h.addr]))
+    )
+  }
+
+  /**
+   * 单例形态校验: 按 klass -> static_fields -> 实例 原地重走指针链(几次读内存), 确认单例
+   * 仍是同一个实例且对象头 klass 未变
+   */
+  private verifySingletons(p: SingletonProfile, proc: GameProcess): boolean {
+    const resolved = this.lastScan?.singletons
+    if (!resolved || resolved.length === 0 || this.fieldHandles.size === 0) return false
+    for (const r of resolved) {
+      const def = p.singletons.find((s) => s.id === r.id)
+      if (!def) return false
+      const sf = proc.readU64(r.klass + r.sfOffset)
+      if (sf === null) return false
+      if (proc.readU64(sf + (def.staticFieldOffset ?? 0)) !== r.instance) return false
+      if (proc.readU64(r.instance) !== r.klass) return false
+    }
+    return true
+  }
+
+  /** 复用结果不完整时的提示(部分 optional 单例不在当前场景), 让用户知道何时该手动重扫 */
+  private reuseNote(p: GameProfile): string | undefined {
+    const skipped = this.lastScan?.skipped
+    if (isAttrDictProfile(p) || !skipped || skipped.length === 0) return undefined
+    const names = p.fields.filter((f) => skipped.includes(f.singleton)).map((f) => f.name)
+    if (names.length === 0) return undefined
+    const shown = names.slice(0, 4).join('、')
+    const more = names.length > 4 ? ` 等 ${names.length} 项` : ''
+    return `${shown}${more} 不在当前场景(上次扫描时为空), 进入对应场景后请点"重新扫描"`
   }
 
   /** 读取属性行(供 UI 展示); 按 profile 形态分流 */
@@ -322,6 +445,7 @@ export class TrainerService {
     this.ensureLockLoop()
     this.handles.clear()
     this.fieldHandles.clear()
+    this.lastScan = null
     if (this.proc) {
       this.proc.close()
       this.proc = null

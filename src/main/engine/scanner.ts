@@ -196,6 +196,8 @@ function saveCache(cachePath: string, data: CacheData): void {
 export interface ScanResult {
   handles: Map<number, AttrHandle>
   info: string
+  /** 命中的字典锚点(entry 起始地址); 供上层做"字典是否还在原处"的廉价复用校验 */
+  anchor: number
 }
 
 /** 定位主角属性字典; cachePath 传 null 则跳过缓存。多候选时用动态采样鉴别活字典(约 3 秒) */
@@ -221,7 +223,7 @@ export async function scanPlayerAttrs(
         const d = walkDictEntries(proc, profile, anchor + 16)
         if (isPlayerDict(d, profile) && d.size >= MIN_DICT_SIZE && validateDict(proc, klass, d)) {
           log?.(`缓存命中: 锚点 0x${anchor.toString(16)}, ${d.size} 项 (跳过全堆扫描)`)
-          return { handles: toHandles(d, proc, profile), info: `缓存命中, ${d.size} 项` }
+          return { handles: toHandles(d, proc, profile), info: `缓存命中, ${d.size} 项`, anchor }
         }
       }
     }
@@ -314,7 +316,8 @@ export async function scanPlayerAttrs(
   log?.(`定位成功: 锚点 0x${best.anchor.toString(16)}, ${best.d.size} 项 (全堆签名扫描)${note}`)
   return {
     handles: toHandles(best.d, proc, profile),
-    info: `锚点 0x${best.anchor.toString(16)}, ${best.d.size} 项${note}`
+    info: `锚点 0x${best.anchor.toString(16)}, ${best.d.size} 项${note}`,
+    anchor: best.anchor
   }
 }
 

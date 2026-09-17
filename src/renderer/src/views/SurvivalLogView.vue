@@ -8,7 +8,7 @@ import { useTrainer } from '../composables/useTrainer'
 
 const emit = defineEmits<{ (e: 'back'): void }>()
 
-const { meta, scanning, scanned, rows, hints, onScan, refresh } = useTrainer('survival-log')
+const { meta, scanning, scanned, rows, hints, locks, note, onScan, refresh } = useTrainer('survival-log')
 </script>
 
 <template>
@@ -23,9 +23,11 @@ const { meta, scanning, scanned, rows, hints, onScan, refresh } = useTrainer('su
     />
 
     <AttrTable
+      v-model:locks="locks"
       :rows="rows"
       :scanned="scanned"
       :hints="hints"
+      :note="note"
       @refresh="refresh"
     />
 

@@ -5,6 +5,8 @@ export const IPC = {
   /** 游戏卡片列表(含进程运行状态) */
   gameList: 'game:list',
   gameScan: 'game:scan',
+  /** 查询当前扫描状态(已有结果且进程未变时直接复用, 不触发重新扫描) */
+  gameTrainerState: 'game:trainerState',
   gameGetAttrs: 'game:getAttrs',
   gameSetAttr: 'game:setAttr',
   gameSetMax: 'game:setMax',
@@ -53,6 +55,20 @@ export interface ScanResultDto {
   attrs: AttrRow[]
   /** 扫描成功后 UI 表格下方的提示文案(来自 profile.uiHints) */
   hints?: string[]
+}
+
+/** 修改页进入时的状态快照: 扫描结果仍在(游戏没关、句柄校验通过)时直接复用, 不重新扫描 */
+export interface TrainerStateDto {
+  /** 是否有可直接复用的扫描结果(false = 调用方自行触发扫描) */
+  scanned: boolean
+  /** 上次扫描的定位信息(如锚点/项数) */
+  message: string
+  attrs: AttrRow[]
+  hints: string[]
+  /** 主进程锁定循环里仍在生效的属性键(用于恢复 UI 锁定开关) */
+  lockedKeys: number[]
+  /** 复用结果不完整时的提示(如部分单例不在当前场景); 非空说明该重新扫描 */
+  note?: string
 }
 
 export interface LogEntry {
@@ -112,6 +128,8 @@ export interface GameTrainerBoxApi {
   listGames(): Promise<GameMeta[]>
   /** 附加指定游戏进程并扫描主角属性字典 */
   scanGame(gameId: string): Promise<ScanResultDto>
+  /** 查询当前扫描状态(不触发扫描; 游戏未关且句柄仍有效时返回可复用结果) */
+  getTrainerState(gameId: string): Promise<TrainerStateDto>
   /** 刷新属性当前值(渲染层轮询) */
   getAttrs(): Promise<AttrRow[]>
   /** 按显示值写入当前值 */

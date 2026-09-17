@@ -58,6 +58,18 @@ export class SingletonFieldHandle {
 export interface SingletonScanResult {
   handles: Map<number, SingletonFieldHandle>
   info: string
+  /** 各单例的解析链(klass -> static_fields -> 实例); 供上层做廉价复用校验, 避免重跑全内存扫描 */
+  resolved: ResolvedSingleton[]
+  /** 因单例为空被跳过的 id(optional 场景, 如基地里悬浮艇不存在) */
+  skipped: string[]
+}
+
+/** 一个单例的解析结果(复用校验时按 klass+sfOffset -> static_fields -> 实例 原地重走) */
+export interface ResolvedSingleton {
+  id: string
+  klass: number
+  sfOffset: number
+  instance: number
 }
 
 function validPtr(p: number | null): p is number {
@@ -200,6 +212,7 @@ export function scanSingletonFields(
   const ptrRecords = findPointersToAny(proc, allStringAddrs)
 
   const instances = new Map<string, number>()
+  const resolved: ResolvedSingleton[] = []
   const skipped = new Set<string>()
   let sfOffset: number | undefined = profile.staticFieldsOffset
   for (const s of profile.singletons) {
@@ -224,6 +237,7 @@ export function scanSingletonFields(
     // 同一 Unity 版本内 Il2CppClass 布局一致, 首个类探测出的偏移供后续类复用
     sfOffset = r.sfOffset
     instances.set(s.id, r.instance)
+    resolved.push({ id: s.id, klass: r.klass, sfOffset: r.sfOffset, instance: r.instance })
     log?.(
       `类 ${s.className}: klass=0x${r.klass.toString(16)} static_fields+0x${r.sfOffset.toString(16)} 实例=0x${r.instance.toString(16)}`
     )
@@ -237,6 +251,8 @@ export function scanSingletonFields(
   const skippedNote = skipped.size > 0 ? `, 跳过 ${skipped.size} 个未生成单例的字段` : ''
   return {
     handles,
-    info: `${profile.singletons.length} 个单例, ${handles.size}/${profile.fields.length} 个字段${skippedNote}`
+    info: `${profile.singletons.length} 个单例, ${handles.size}/${profile.fields.length} 个字段${skippedNote}`,
+    resolved,
+    skipped: [...skipped]
   }
 }
