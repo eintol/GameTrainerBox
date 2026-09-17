@@ -1,6 +1,13 @@
 // UI 音效: 修改成功提示音(assets/ding.wav)
 // assetsInlineLimit 已调大(electron.vite.config.ts), wav 会内联成 data URL, 规避生产模式 file:// 下 fetch 本地资源受限
+import { ref, watch } from 'vue'
 import dingUrl from '../assets/ding.wav'
+
+const SOUND_ENABLED_KEY = 'gb:sound-enabled'
+
+/** 音效总开关(首页切换, 默认开启); localStorage 持久化, 重开应用不丢 */
+export const soundEnabled = ref(localStorage.getItem(SOUND_ENABLED_KEY) !== '0')
+watch(soundEnabled, (on) => localStorage.setItem(SOUND_ENABLED_KEY, on ? '1' : '0'))
 
 let ctx: AudioContext | null = null
 let buf: AudioBuffer | null = null
@@ -21,8 +28,9 @@ function ensureLoaded(): Promise<void> {
   return loading
 }
 
-/** 播放修改成功提示音 */
+/** 播放修改成功提示音(音效开关关闭时直接跳过) */
 export function playSuccess(): void {
+  if (!soundEnabled.value) return
   try {
     ctx ??= new AudioContext()
     if (ctx.state === 'suspended') void ctx.resume()
