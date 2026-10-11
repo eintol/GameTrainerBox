@@ -52,6 +52,9 @@ GameTrainerBox：单机游戏运行时属性修改器（Electron 桌面应用）
   `builds.bepinex.dev` 的 BE 构建，Unity 6 必须 be.753 之后（含 PR #1284）
 - 禁止使用 Harmony/HarmonyX patch 游戏（Unity 6000.2.0a1 上 native detour 必闪退、无任何日志）；
   hook 类需求一律走"注入 MonoBehaviour 主线程轮询 + interop 直改数据"
+- 游戏更新后首次启动慢（数分钟）是预期行为（interop 自动重建 ~40s + Unity 版本变更时 unity-libs
+  zip 下载，带宽被 Steam 挤占时更久）；正常启动基线 ~7s——勿当 Mod 故障修，勿关
+  `UpdateInteropAssemblies`（旧 interop 有错读/崩溃风险，见踩坑记录 C7）
 
 **配置与文件**
 - 游戏行为数据禁止写入 BepInEx 托管的 cfg（插件应用时会触发回写，外部值被拆行/清空）；

@@ -53,8 +53,9 @@ GameTrainerBox 的容器扩容卡片 = 本 Mod 的图形前端：添加容器 �
 
 - 已验证：游戏 1.0.15704 及后续历次更新（最新 **1.1.18385**, 2026-10-11；Unity 6000.2.7f2, IL2CPP metadata v31）+ BepInEx 6.0.0-be.788
 - **游戏大版本更新后**：①重新 dump（Il2CppDumper）②启动游戏，InteropManager 自动重生成 interop
-  （2026-09-15 实测；仅当插件加载异常才手动删 `BepInEx\interop`、`unity-libs` 重启）
-  ③跑 `GameTrainerBox/scripts/locate-attr-class.ts` 重定位属性 RVA（与 Mod 无关但同批做）
+  （2026-09-15 实测；仅当插件加载异常才手动删 `BepInEx\interop`、`unity-libs` 重启；
+  **更新后首次启动会慢几分钟**——重建 ~40s + Unity 版本变更时 unity-libs zip 下载，属预期，
+  见踩坑记录 C7）③跑 `GameTrainerBox/scripts/locate-attr-class.ts` 重定位属性 RVA（与 Mod 无关但同批做）
   ④进局验证容器清单与热生效
 - BepInEx 升级：换包后同样删 interop/unity-libs 重新生成
 
