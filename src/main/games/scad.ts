@@ -1,5 +1,7 @@
-// SCAD 适配器 profile(NAISU, Steam appid 2854620)
-// 版本 1.0(Unity 6000.3.14f1, IL2CPP metadata v39)
+// SCAD 适配器 profile(NAISU, Steam appid 2854620, 游戏中文名 末日战车：丧尸废土)
+// 版本 1.0; 2026-10-11 游戏更新(buildid 25785844, 版本串新增 1.1.0)后重新 dump 复测:
+//   InventoryController / Hovercraft / Resources 结构体 / Entity 的类名与字段偏移零变化,
+//   il2cpp.h 的 Il2CppClass 三段式布局不变(static_fields 仍 0xB8) —— 本 profile 无版本相关参数, 未改动
 // 规格来源: Il2CppDumper(metadata v39 fork, 见 docs/辅助工具使用说明.md) dump.cs
 // 形态: 静态单例字段(非属性字典) —— 类名定位 klass, 无版本相关 RVA
 //   InventoryController.main(static_fields+0x0) -> resources 5 项 int @ 0x1C..0x2C
@@ -10,7 +12,7 @@ import type { SingletonProfile } from './types'
 
 export const scadProfile: SingletonProfile = {
   id: 'scad',
-  name: 'SCAD',
+  name: '末日战车：丧尸废土 (SCAD)',
   processName: 'SCAD.exe',
   moduleName: 'GameAssembly.dll',
   kind: 'singleton-fields',

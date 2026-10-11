@@ -5,7 +5,7 @@
 ## 项目概述
 
 GameTrainerBox：单机游戏运行时属性修改器（Electron 桌面应用）。当前适配 Survival Log（Unity IL2CPP）
-与 SCAD（Unity 6.3 IL2CPP，metadata v39）。
+与 SCAD（中文名「末日战车：丧尸废土」，Unity 6.3 IL2CPP，metadata v39）。
 早期 Python 原型已删除（2026-09-04），其方案与实测规格归档在 `docs/2026-09-04-生存日志运行时修改器-方案与使用.md`。
 
 ### 文档体系（活文档约定）
@@ -163,7 +163,9 @@ cd <工具目录>\Il2CppDumper
 
 ## 游戏适配（SCAD）
 
-- 版本 1.0（Unity 6000.3.14f1，IL2CPP metadata v39）。profile `src/main/games/scad.ts`
+- 版本 1.0（游戏中文名「末日战车：丧尸废土」；2026-10-11 游戏更新 buildid 25785844 后重新 dump
+  复测，类名/字段偏移/Il2CppClass 布局零变化，profile 未动——类名定位方案版本无关的直接验证）。
+  Unity 6000.3.14f1，IL2CPP metadata v39。profile `src/main/games/scad.ts`
   （singleton-fields 形态），引擎 `src/main/engine/singleton.ts`；与 Survival Log 的字典形态（attr-dict）
   并列为 `GameProfile` 判别联合的两翼，trainer 按 kind 分流
 - 定位机制（无版本相关 RVA，类名定位方案版本无关）：全内存搜类名字符串 → 反搜指针定位

@@ -2,7 +2,7 @@
 
 **单机游戏运行时修改器盒子** — A desktop trainer box for single-player games: a generic runtime memory engine plus per-game adapter profiles, built with Electron + Vue 3.
 
-当前适配：**生存日志（Survival Log）**（Unity IL2CPP，实测 v1.1.18385）与 **SCAD**（Unity 6000.3.14f1，IL2CPP metadata v39，实测 v1.0）。
+当前适配：**生存日志（Survival Log）**（Unity IL2CPP，实测 v1.1.18385）与 **末日战车：丧尸废土（SCAD）**（Unity 6000.3.14f1，IL2CPP metadata v39，2026-10-11 更新复测）。
 
 <!-- TODO: 补运行界面截图/GIF（属性面板 + 容器扩容卡片），存放于 docs/screenshots/ -->
 
@@ -14,7 +14,7 @@
 - 五维属性（饱腹/心态/精力/生命/健康）+ 人物移速 实时查看、修改、锁定（0.3s 写回）
 - 一键「上限→500」拉满属性上限（自动处理游戏硬封顶字段）
 
-**SCAD**
+**末日战车：丧尸废土（SCAD）**
 
 - 资源五项（废料/木材/金属/燃料/塑料）实时查看、修改、锁定——基地 / 主界面 / 远征均可
 - 载具生命 / 护盾 / 移速 实时查看、修改、锁定——仅远征局内（悬浮艇生成后），生命/护盾支持一键「拉满」
