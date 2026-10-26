@@ -4,6 +4,15 @@
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-10-26
+
+### 修复
+
+- 生存日志（Survival Log）适配 1.1.19611：游戏更新（buildid 26157732）后 TypeInfo 槽位漂移，
+  `attrTypeInfoRva` 重新定位（0x5a3d050 → 0x5bca908，取自 script.json 的 ScriptMetadata.Address，
+  该来源在 1.1 系列已两次运行时验证精确）；游戏内冒烟 + 移速写入回读还原复验通过；重新 dump
+  核对 Attr 字段偏移与 AttrName 枚举均无变化，容器扩容 Mod 依赖符号不变、无需重建
+
 ## [0.2.3] - 2026-10-11
 
 ### 修复
