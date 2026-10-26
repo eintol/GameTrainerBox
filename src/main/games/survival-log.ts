@@ -1,5 +1,5 @@
 // Survival Log(生存日志) 适配器 profile
-// 版本 1.1.18385 (Unity IL2CPP, metadata v31; 2026-10-11 适配, 旧版 1.0.15690/1.0.15704/1.0.16363/1.0.16756)
+// 版本 1.1.19611 (Unity 6000.2.7f2 IL2CPP, metadata v31; 2026-10-26 适配, 旧版 1.0.15690/1.0.15704/1.0.16363/1.0.16756/1.1.18385)
 // 规格来源: Il2CppDumper dump.cs + Python 原型实测验证
 //   (归档文档: docs/2026-09-04-生存日志运行时修改器-方案与使用.md)
 import type { AttrDictProfile } from './types'
@@ -30,9 +30,11 @@ export const survivalLogProfile: AttrDictProfile = {
   moduleName: 'GameAssembly.dll',
   // GameCore.HotUpdate.Battle.Logic.Attr_TypeInfo (游戏更新后用 scripts/locate-attr-class.ts 重新定位;
   // script.json 的 ScriptMetadata.Address 在 1.0.15704 上与运行时槽位差 8~24 字节, 勿再使用)
-  // 2026-10-11 定位 (1.1.18385, buildid 25848320): 0x5a3d050 (旧 1.0.16756 为 0x53b6340; 1.0→1.1 大更新后 Attr 字段偏移
-  // 与 AttrName 99 枚举值仍无变化, 仅 TypeInfo 槽位漂移 —— 与历次更新同一模式)
-  attrTypeInfoRva: 0x5a3d050,
+  // 2026-10-26 定位 (1.1.19611, buildid 26157732): 0x5bca908 (旧 1.1.18385 为 0x5a3d050)。
+  // 取值来源: Il2CppDumper script.json 的 ScriptMetadata.Address —— 1.1.18385 上与运行时已验证 RVA 逐位
+  // 一致, 本版游戏内冒烟 + 移速写入回读还原复验通过(2026-10-26), 1.1 系列可作首选定位(1.0 系列曾差 8~24 字节)
+  // 1.1.18385→1.1.19611: Attr 字段偏移与 AttrName 99 枚举值仍无变化, 仅 TypeInfo 槽位漂移(与历次更新同一模式)
+  attrTypeInfoRva: 0x5bca908,
   attrOffsets: {
     base: 0x10,
     strengthening: 0x14,
